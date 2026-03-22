@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { backendFetch } from '../lib/backend'
+import { backendFetch, backendMediaUrl } from '../lib/backend'
 import { logger } from '../lib/logger'
 
 export type RetakeMode = 'replace_audio_and_video' | 'replace_video' | 'replace_audio'
@@ -58,8 +58,15 @@ export function useRetake() {
       const data = await response.json()
 
       if (response.ok && data.status === 'complete' && data.video_path) {
-        const pathNormalized = data.video_path.replace(/\\/g, '/')
-        const videoUrl = pathNormalized.startsWith('/') ? `file://${pathNormalized}` : `file:///${pathNormalized}`
+        let videoUrl: string
+        const isExternal = await window.electronAPI.isExternalBackend()
+        
+        if (isExternal) {
+          videoUrl = await backendMediaUrl(data.video_path)
+        } else {
+          const pathNormalized = data.video_path.replace(/\\/g, '/')
+          videoUrl = pathNormalized.startsWith('/') ? `file://${pathNormalized}` : `file:///${pathNormalized}`
+        }
 
         setState({
           isRetaking: false,

@@ -23,6 +23,7 @@ from _routes.suggest_gap_prompt import router as suggest_gap_prompt_router
 from _routes.retake import router as retake_router
 from _routes.runtime_policy import router as runtime_policy_router
 from _routes.settings import router as settings_router
+from _routes.media import router as media_router
 from logging_policy import log_http_error, log_unhandled_exception
 from state import init_state_service
 
@@ -72,6 +73,12 @@ def create_app(
             if _token_matches(request.query_params.get("token", "")):
                 return await call_next(request)
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+        # HTTP GET generic query token check (e.g. for /api/media streaming)
+        query_token = request.query_params.get("token", "")
+        if query_token and _token_matches(query_token):
+            return await call_next(request)
+
         # HTTP: Bearer or Basic auth
         auth_header = request.headers.get("authorization", "")
         if auth_header.startswith("Bearer ") and _token_matches(auth_header[7:]):
@@ -116,5 +123,6 @@ def create_app(
     app.include_router(retake_router)
     app.include_router(ic_lora_router)
     app.include_router(runtime_policy_router)
+    app.include_router(media_router)
 
     return app

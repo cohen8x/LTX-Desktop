@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { backendFetch } from '../lib/backend'
+import { backendFetch, backendMediaUrl } from '../lib/backend'
 import { logger } from '../lib/logger'
 
 export type IcLoraConditioningType = 'canny' | 'depth' | 'pose'
@@ -55,8 +55,15 @@ export function useIcLora() {
 
       const data = await response.json()
       if (response.ok && data.status === 'complete' && data.video_path) {
-        const pathNormalized = data.video_path.replace(/\\/g, '/')
-        const videoUrl = pathNormalized.startsWith('/') ? `file://${pathNormalized}` : `file:///${pathNormalized}`
+        let videoUrl: string
+        const isExternal = await window.electronAPI.isExternalBackend()
+        
+        if (isExternal) {
+          videoUrl = await backendMediaUrl(data.video_path)
+        } else {
+          const pathNormalized = data.video_path.replace(/\\/g, '/')
+          videoUrl = pathNormalized.startsWith('/') ? `file://${pathNormalized}` : `file:///${pathNormalized}`
+        }
         setState({
           isGenerating: false,
           status: 'Generation complete!',

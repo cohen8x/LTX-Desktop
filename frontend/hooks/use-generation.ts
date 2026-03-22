@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import type { GenerationSettings } from '../components/SettingsPanel'
-import { backendFetch } from '../lib/backend'
+import { backendFetch, backendMediaUrl } from '../lib/backend'
 import { useAppSettings } from '../contexts/AppSettingsContext'
 
 interface GenerationState {
@@ -134,6 +134,39 @@ export function useGeneration(): UseGenerationReturn {
     let shouldApplyPollingUpdates = true
 
     try {
+      let finalImagePath = imagePath
+      let finalAudioPath = audioPath
+
+      const isExternal = await window.electronAPI.isExternalBackend()
+
+      if (isExternal) {
+        // Upload image to remote backend if provided
+        if (imagePath) {
+          setState(prev => ({ ...prev, statusMessage: 'Uploading image...' }))
+          const { data, mimeType } = await window.electronAPI.readLocalFile(imagePath)
+          const blob = await fetch(`data:${mimeType};base64,${data}`).then(r => r.blob())
+          const formData = new FormData()
+          // Use original filename or dummy to preserve extension
+          const imgName = imagePath.split(/[\/\\]/).pop() || 'image.png'
+          formData.append('file', blob, imgName)
+          const upRes = await backendFetch('/api/upload', { method: 'POST', body: formData })
+          if (!upRes.ok) throw new Error('Failed to upload image')
+          finalImagePath = (await upRes.json()).path
+        }
+        // Upload audio to remote backend if provided
+        if (audioPath) {
+          setState(prev => ({ ...prev, statusMessage: 'Uploading audio...' }))
+          const { data, mimeType } = await window.electronAPI.readLocalFile(audioPath)
+          const blob = await fetch(`data:${mimeType};base64,${data}`).then(r => r.blob())
+          const formData = new FormData()
+          const audName = audioPath.split(/[\/\\]/).pop() || 'audio.mp3'
+          formData.append('file', blob, audName)
+          const upRes = await backendFetch('/api/upload', { method: 'POST', body: formData })
+          if (!upRes.ok) throw new Error('Failed to upload audio')
+          finalAudioPath = (await upRes.json()).path
+        }
+      }
+
       // Prepare JSON body
       const body: Record<string, unknown> = {
         prompt,
@@ -145,11 +178,11 @@ export function useGeneration(): UseGenerationReturn {
         cameraMotion: settings.cameraMotion,
         aspectRatio: settings.aspectRatio || '16:9',
       }
-      if (imagePath) {
-        body.imagePath = imagePath
+      if (finalImagePath) {
+        body.imagePath = finalImagePath
       }
-      if (audioPath) {
-        body.audioPath = audioPath
+      if (finalAudioPath) {
+        body.audioPath = finalAudioPath
       }
 
       // Poll for real progress from backend with time-based interpolation
@@ -219,9 +252,16 @@ export function useGeneration(): UseGenerationReturn {
       const result = await response.json()
       
       if (result.status === 'complete' && result.video_path) {
-        // Convert Windows path to proper file:// URL
-        const videoPathNormalized = result.video_path.replace(/\\/g, '/')
-        const fileUrl = videoPathNormalized.startsWith('/') ? `file://${videoPathNormalized}` : `file:///${videoPathNormalized}`
+        let fileUrl: string
+        const isExternal = await window.electronAPI.isExternalBackend()
+        
+        if (isExternal) {
+          fileUrl = await backendMediaUrl(result.video_path)
+        } else {
+          // Convert Windows path to proper file:// URL
+          const videoPathNormalized = result.video_path.replace(/\\/g, '/')
+          fileUrl = videoPathNormalized.startsWith('/') ? `file://${videoPathNormalized}` : `file:///${videoPathNormalized}`
+        }
         
         setState({
           isGenerating: false,
@@ -407,11 +447,17 @@ export function useGeneration(): UseGenerationReturn {
         }
         
         if (rawPaths.length > 0) {
-          // Convert all paths to file URLs
-          const fileUrls = rawPaths.map((path: string) => {
-            const imagePath = path.replace(/\\/g, '/')
-            return imagePath.startsWith('/') ? `file://${imagePath}` : `file:///${imagePath}`
-          })
+          const isExternal = await window.electronAPI.isExternalBackend()
+          
+          // Convert all paths to playable URLs
+          const fileUrls = await Promise.all(rawPaths.map(async (path: string) => {
+            if (isExternal) {
+              return backendMediaUrl(path)
+            } else {
+              const imagePath = path.replace(/\\/g, '/')
+              return imagePath.startsWith('/') ? `file://${imagePath}` : `file:///${imagePath}`
+            }
+          }))
           
           setState({
             isGenerating: false,
