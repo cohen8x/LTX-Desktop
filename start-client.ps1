@@ -4,11 +4,11 @@
 # ========================================================
 
 # 1. 填入您在云端 server.sh 中配置的公网/局域网 IP
-$env:LTX_EXTERNAL_BACKEND_URL="http://您的云端IP:8000"
+$env:LTX_EXTERNAL_BACKEND_URL = "http://117.50.248.201:8000"
 
 # 2. 填入您与云端约定的防盗密码
-$env:LTX_AUTH_TOKEN="my_super_secret_auth_token"
-$env:LTX_ADMIN_TOKEN="my_super_secret_admin_token"
+$env:LTX_AUTH_TOKEN = "my_super_secret_auth_token"
+$env:LTX_ADMIN_TOKEN = "my_super_secret_admin_token"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "🚀 正在启动 LTX-Desktop 远程轻量化瘦客户端..." -ForegroundColor Green

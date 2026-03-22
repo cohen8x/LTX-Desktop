@@ -4,7 +4,7 @@ import { isDev } from './config'
 // Enforce Content Security Policy via response headers (tamper-proof from renderer)
 export function setupCSP(): void {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    const csp = isDev
+    let cspStr = isDev
       ? [
           "default-src 'self'",
           "script-src 'self' 'unsafe-inline'",
@@ -32,10 +32,23 @@ export function setupCSP(): void {
           "frame-ancestors 'none'",
         ].join('; ')
 
+    // Dynamically inject the external backend URL to allow connections
+    const externalUrl = process.env.LTX_EXTERNAL_BACKEND_URL
+    if (externalUrl) {
+      try {
+        const urlObj = new URL(externalUrl)
+        const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:'
+        const allowedOrigin = `${urlObj.protocol}//${urlObj.host} ${wsProtocol}//${urlObj.host}`
+        cspStr = cspStr.replace('connect-src', `connect-src ${allowedOrigin}`)
+      } catch (e) {
+        console.warn('Failed to parse LTX_EXTERNAL_BACKEND_URL for CSP injection:', e)
+      }
+    }
+
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [csp],
+        'Content-Security-Policy': [cspStr],
       },
     })
   })

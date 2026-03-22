@@ -223,7 +223,18 @@ handler = build_initial_state(runtime_config, DEFAULT_APP_SETTINGS)
 auth_token = os.environ.get("LTX_AUTH_TOKEN", "")
 admin_token = os.environ.get("LTX_ADMIN_TOKEN", "")
 
-app = create_app(handler=handler, allowed_origins=DEFAULT_ALLOWED_ORIGINS, auth_token=auth_token, admin_token=admin_token)
+# When the server is deliberately bound to all interfaces for external decoupling, 
+# allow all domains (*) instead of failing on local app:// or LAN IPs.
+# Auth is still securely protected by LTX_AUTH_TOKEN middleware.
+host_bind = os.environ.get("LTX_HOST", "127.0.0.1")
+allowed_origins = ["*"] if host_bind == "0.0.0.0" else DEFAULT_ALLOWED_ORIGINS
+
+app = create_app(
+    handler=handler,
+    allowed_origins=allowed_origins,
+    auth_token=auth_token,
+    admin_token=admin_token
+)
 
 
 def precache_model_files(model_dir: Path) -> int:
