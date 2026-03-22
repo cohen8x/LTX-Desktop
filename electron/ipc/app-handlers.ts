@@ -189,4 +189,8 @@ export function registerAppHandlers(): void {
     return { success: true, path: newDir }
   })
 
+  ipcMain.handle('is-external-backend', () => {
+    return !!process.env.LTX_EXTERNAL_BACKEND_URL
+  })
+
 }

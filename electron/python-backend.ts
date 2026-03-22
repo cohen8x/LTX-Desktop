@@ -24,7 +24,7 @@ export function getBackendUrl(): string | null { return backendUrl }
 export function getAuthToken(): string | null { return authToken }
 export function getAdminToken(): string | null { return adminToken }
 
-type BackendOwnership = 'managed' | 'adopted' | null
+type BackendOwnership = 'managed' | 'adopted' | 'external' | null
 
 let backendOwnership: BackendOwnership = null
 
@@ -197,6 +197,20 @@ export function getPythonPath(): string {
 }
 
 export async function startPythonBackend(): Promise<void> {
+  const externalUrl = process.env.LTX_EXTERNAL_BACKEND_URL
+  if (externalUrl) {
+    if (backendOwnership === 'external' && backendUrl === externalUrl) {
+      return
+    }
+    logger.info(`Using external backend URL: ${externalUrl}`)
+    backendUrl = externalUrl
+    authToken = process.env.LTX_AUTH_TOKEN || null
+    adminToken = process.env.LTX_ADMIN_TOKEN || null
+    backendOwnership = 'external'
+    publishBackendHealthStatus({ status: 'alive' })
+    return
+  }
+
   if (startPromise) {
     return startPromise
   }
@@ -430,7 +444,7 @@ export function stopPythonBackend(): void {
     return
   }
 
-  if (backendOwnership === 'adopted') {
+  if (backendOwnership === 'adopted' || backendOwnership === 'external') {
     backendOwnership = null
     latestBackendHealthStatus = null
   }

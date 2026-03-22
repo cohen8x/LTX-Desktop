@@ -160,6 +160,10 @@ LTX_API_BASE_URL = "https://api.ltx.video"
 
 
 def _resolve_force_api_generations() -> bool:
+    if os.environ.get("LTX_FORCE_LOCAL_MODE") == "1":
+        logger.info("LTX_FORCE_LOCAL_MODE is set; unlocking full local UI.")
+        return False
+
     gpu_info = GpuInfoImpl()
     system = platform.system()
     cuda_available = gpu_info.get_cuda_available()

@@ -125,6 +125,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Platform info
   platform: process.platform,
+
+  isExternalBackend: (): Promise<boolean> => ipcRenderer.invoke('is-external-backend'),
 })
 
 interface LogsResponse {
@@ -191,6 +193,7 @@ declare global {
       setAnalyticsEnabled: (enabled: boolean) => Promise<void>
       sendAnalyticsEvent: (eventName: string, extraDetails?: Record<string, unknown> | null) => Promise<void>
       platform: string
+      isExternalBackend: () => Promise<boolean>
     }
   }
 }

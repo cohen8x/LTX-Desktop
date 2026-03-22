@@ -217,6 +217,12 @@ function AppContent() {
 
     const checkRequiredModels = async () => {
       try {
+        const isExternal = await window.electronAPI.isExternalBackend()
+        if (isExternal) {
+          if (!cancelled) setRequiredModelsGate('ready')
+          return
+        }
+
         const allDownloaded = await areRequiredModelsDownloaded()
         if (cancelled) return
         setRequiredModelsGate(allDownloaded ? 'ready' : 'missing')
