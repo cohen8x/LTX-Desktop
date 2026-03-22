@@ -1,7 +1,7 @@
 import { ipcMain, dialog } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import { getAllowedRoots } from '../config'
+import { getAllowedRoots, getCurrentDir } from '../config'
 import { logger } from '../logger'
 import { getMainWindow } from '../window'
 import { validatePath, approvePath } from '../path-validation'
@@ -94,15 +94,23 @@ export function registerFileHandlers(): void {
 
   ipcMain.handle('read-local-file', async (_event, filePath: string) => {
     try {
-      const normalizedPath = validatePath(filePath, getAllowedRoots())
-
-      if (!fs.existsSync(normalizedPath)) {
-        throw new Error(`File not found: ${normalizedPath}`)
+      let normalizedPath = filePath
+      // Fix for frontend url-to-path artifacts (e.g., frontend passes /./11.jpg for relative drops)
+      if (normalizedPath.startsWith('/./')) {
+        normalizedPath = path.join(getCurrentDir(), normalizedPath.slice(3))
+      } else if (normalizedPath.startsWith('//.')) {
+        normalizedPath = path.join(getCurrentDir(), normalizedPath.slice(4))
       }
 
-      return readLocalFileAsBase64(normalizedPath)
+      const absolutePath = path.resolve(normalizedPath)
+
+      if (!fs.existsSync(absolutePath)) {
+        throw new Error(`File not found: ${absolutePath}`)
+      }
+
+      return readLocalFileAsBase64(absolutePath)
     } catch (error) {
-      logger.error( `Error reading local file: ${error}`)
+      logger.error(`Error reading local file: ${error}`)
       throw error
     }
   })
