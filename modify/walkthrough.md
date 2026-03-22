@@ -36,6 +36,21 @@ uv run python ltx2_server.py
 ```
 
 **Local Client Launch (Pointing to Cloud)**
+
+Option 1: Inline environment variables
 ```bash
-cross-env LTX_EXTERNAL_BACKEND_URL=http://<REMOTE_IP>:<PORT> LTX_AUTH_TOKEN=<YOUR_GENERATED_TOKEN> LTX_ADMIN_TOKEN=<YOUR_GENERATED_ADMIN_TOKEN> pnpm dev
+cross-env LTX_EXTERNAL_BACKEND_URL=http://<REMOTE_IP>:<PORT> pnpm dev
 ```
+
+Option 2: Using a `.env` file
+You can create a `.env` file in the project root so you don't have to type it every time:
+
+```env
+LTX_EXTERNAL_BACKEND_URL=http://<REMOTE_IP>:<PORT>
+# The following tokens are COMPLETELY OPTIONAL for self-hosted instances. 
+# Only add them if you explicitly configured authentication on your backend:
+LTX_AUTH_TOKEN=<YOUR_GENERATED_TOKEN>
+LTX_ADMIN_TOKEN=<YOUR_GENERATED_ADMIN_TOKEN>
+```
+
+Then run: `pnpm dev`

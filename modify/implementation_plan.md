@@ -31,6 +31,16 @@ No breaking changes to the default behavior. The new behavior is entirely opt-in
    - Run the python backend independently with `LTX_FORCE_LOCAL_MODE=1` to ensure it starts and reports `force_api_generations=False`.
    - Command (PowerShell): `$env:LTX_FORCE_LOCAL_MODE="1"; $env:LTX_APP_DATA_DIR="$env:APPDATA\ltx-desktop"; cd backend; uv run python ltx2_server.py`
 2. **Start Frontend Separately**:
-   - Run the frontend with `LTX_EXTERNAL_BACKEND_URL`, `LTX_AUTH_TOKEN`, and `LTX_ADMIN_TOKEN` pointing to the separated backend.
-   - Command: `cross-env LTX_EXTERNAL_BACKEND_URL=http://localhost:0 LTX_AUTH_TOKEN=... LTX_ADMIN_TOKEN=... pnpm dev`
+   - Run the frontend with `LTX_EXTERNAL_BACKEND_URL` pointing to the separated backend.
+   - Command: `cross-env LTX_EXTERNAL_BACKEND_URL=http://<REMOTE_IP>:<PORT> pnpm dev`
+   - Alternatively, create a `.env` file in the project root:
+     
+     ```env
+     LTX_EXTERNAL_BACKEND_URL=http://<REMOTE_IP>:<PORT>
+     # (Optional) If your backend requires authentication:
+     LTX_AUTH_TOKEN=my_secret_token
+     LTX_ADMIN_TOKEN=my_admin_token
+     ```
+     
+     and run: `pnpm dev`
    - Verify the frontend loads the full local UI without attempting to spawn a child Python process.

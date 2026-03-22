@@ -264,6 +264,7 @@ if __name__ == "__main__":
     import asyncio
     import uvicorn
 
+    host = os.environ.get("LTX_HOST", "127.0.0.1")
     port = int(os.environ.get("LTX_PORT", "") or PORT)
     logger.info("=" * 60)
     logger.info("LTX-2 Video Generation Server (FastAPI + Uvicorn)")
@@ -296,10 +297,10 @@ if __name__ == "__main__":
     # Bind the socket ourselves so we know the actual port before uvicorn starts.
     sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
     sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, 1)
-    sock.bind(("127.0.0.1", port))
+    sock.bind((host, port))
     actual_port = int(sock.getsockname()[1])
 
-    config = uvicorn.Config(app, host="127.0.0.1", port=actual_port, log_level="info", access_log=False, log_config=log_config)
+    config = uvicorn.Config(app, host=host, port=actual_port, log_level="info", access_log=False, log_config=log_config)
     server = uvicorn.Server(config)
 
     _orig_startup = server.startup
@@ -308,7 +309,7 @@ if __name__ == "__main__":
         await _orig_startup(sockets=sockets)
         if server.started:
             # Machine-parseable ready message — Electron matches this line
-            print(f"Server running on http://127.0.0.1:{actual_port}", flush=True)
+            print(f"Server running on http://{host}:{actual_port}", flush=True)
 
     server.startup = _startup_with_ready_msg  # type: ignore[assignment]
 

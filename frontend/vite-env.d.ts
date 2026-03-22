@@ -63,5 +63,6 @@ interface Window {
     setAnalyticsEnabled: (enabled: boolean) => Promise<void>
     sendAnalyticsEvent: (eventName: string, extraDetails?: Record<string, unknown> | null) => Promise<void>
     platform: string
+    isExternalBackend: () => Promise<boolean>
   }
 }

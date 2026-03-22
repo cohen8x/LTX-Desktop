@@ -1,4 +1,6 @@
 import './app-paths'
+import { loadEnv } from './config'
+loadEnv()
 import { app } from 'electron'
 import { setupCSP } from './csp'
 import { registerExportHandlers } from './export/export-handler'
