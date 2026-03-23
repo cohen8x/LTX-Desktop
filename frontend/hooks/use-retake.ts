@@ -43,11 +43,60 @@ export function useRetake() {
     })
 
     try {
+      let finalVideoPath = params.videoPath
+      const backendCreds = await window.electronAPI.getBackend()
+      const connectedUrl = backendCreds?.url || ''
+      const isExternal = connectedUrl && !connectedUrl.includes('127.0.0.1') && !connectedUrl.includes('localhost')
+
+      const fileUrlToPath = (url: string) => {
+        if (url.startsWith('file://')) {
+          let p = decodeURIComponent(url.slice(7))
+          if (/^\/[A-Za-z]:/.test(p)) p = p.slice(1)
+          return p
+        }
+        return url
+      }
+
+      if (isExternal && params.videoPath) {
+        setState(prev => ({ ...prev, retakeStatus: 'Uploading video...' }))
+        let blob: Blob
+        let vidName = 'video.mp4'
+
+        if (params.videoPath.startsWith('blob:')) {
+          const resp = await fetch(params.videoPath)
+          blob = await resp.blob()
+        } else {
+          const localPath = fileUrlToPath(params.videoPath)
+          const { data, mimeType } = await window.electronAPI.readLocalFile(localPath)
+          const byteCharacters = atob(data)
+          const byteNumbers = new Array(byteCharacters.length)
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i)
+          }
+          const byteArray = new Uint8Array(byteNumbers)
+          blob = new Blob([byteArray], { type: mimeType })
+          vidName = localPath.split(/[\/\\]/).pop() || 'video.mp4'
+        }
+
+        const formData = new FormData()
+        formData.append('file', blob, vidName)
+        const upRes = await backendFetch('/api/upload', { method: 'POST', body: formData })
+        if (!upRes.ok) throw new Error('Failed to upload video')
+        finalVideoPath = (await upRes.json()).path
+        
+        setState(prev => ({ ...prev, retakeStatus: 'Generating' }))
+      } else {
+        if (params.videoPath.startsWith('blob:')) {
+          throw new Error('Local backend requires an absolute file path, but received an unsaved browser file. Please click "upload a file" instead of dragging from another browser window.')
+        }
+        finalVideoPath = fileUrlToPath(params.videoPath)
+      }
+
       const response = await backendFetch('/api/retake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          video_path: params.videoPath,
+          video_path: finalVideoPath,
           start_time: params.startTime,
           duration: params.duration,
           prompt: params.prompt,
@@ -59,7 +108,9 @@ export function useRetake() {
 
       if (response.ok && data.status === 'complete' && data.video_path) {
         let videoUrl: string
-        const isExternal = await window.electronAPI.isExternalBackend()
+        const backendCreds = await window.electronAPI.getBackend()
+        const connectedUrl = backendCreds?.url || ''
+        const isExternal = connectedUrl && !connectedUrl.includes('127.0.0.1') && !connectedUrl.includes('localhost')
         
         if (isExternal) {
           videoUrl = await backendMediaUrl(data.video_path)

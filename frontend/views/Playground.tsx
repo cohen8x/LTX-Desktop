@@ -17,7 +17,7 @@ import { useIcLora } from '../hooks/use-ic-lora'
 import { useBackend } from '../hooks/use-backend'
 import { useProjects } from '../contexts/ProjectContext'
 import { useAppSettings } from '../contexts/AppSettingsContext'
-import { fileUrlToPath } from '../lib/url-to-path'
+
 import { sanitizeForcedApiVideoSettings } from '../lib/api-video-options'
 import { RetakePanel } from '../components/RetakePanel'
 import { ICLoraPanel, CONDITIONING_TYPES, type ICLoraConditioningType } from '../components/ICLoraPanel'
@@ -163,10 +163,10 @@ export function Playground() {
         : settings
       // Auto-detect: if image is loaded → I2V, otherwise → T2V
       if (!prompt.trim()) return
-      const imagePath = selectedImage ? fileUrlToPath(selectedImage) : null
-      const audioPath = selectedAudio ? fileUrlToPath(selectedAudio) : null
-      if (audioPath) effectiveVideoSettings.model = 'pro'
-      generate(prompt, imagePath, effectiveVideoSettings, audioPath)
+      const imageUri = selectedImage
+      const audioUri = selectedAudio
+      if (audioUri) effectiveVideoSettings.model = 'pro'
+      generate(prompt, imageUri, effectiveVideoSettings, audioUri)
     }
   }
   

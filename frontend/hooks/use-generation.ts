@@ -137,17 +137,42 @@ export function useGeneration(): UseGenerationReturn {
       let finalImagePath = imagePath
       let finalAudioPath = audioPath
 
-      const isExternal = await window.electronAPI.isExternalBackend()
+      const backendCreds = await window.electronAPI.getBackend()
+      const connectedUrl = backendCreds?.url || ''
+      const isExternal = connectedUrl && !connectedUrl.includes('127.0.0.1') && !connectedUrl.includes('localhost')
 
       if (isExternal) {
         // Upload image to remote backend if provided
         if (imagePath) {
           setState(prev => ({ ...prev, statusMessage: 'Uploading image...' }))
-          const { data, mimeType } = await window.electronAPI.readLocalFile(imagePath)
-          const blob = await fetch(`data:${mimeType};base64,${data}`).then(r => r.blob())
+          let blob: Blob
+          let imgName = 'image.png'
+          
+          if (imagePath.startsWith('blob:')) {
+            const resp = await fetch(imagePath)
+            blob = await resp.blob()
+          } else {
+            const fileUrlToPath = (url: string) => {
+              if (url.startsWith('file://')) {
+                let p = decodeURIComponent(url.slice(7))
+                if (/^\/[A-Za-z]:/.test(p)) p = p.slice(1)
+                return p
+              }
+              return url
+            }
+            const localPath = fileUrlToPath(imagePath)
+            const { data, mimeType } = await window.electronAPI.readLocalFile(localPath)
+            const byteCharacters = atob(data)
+            const byteNumbers = new Array(byteCharacters.length)
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i)
+            }
+            const byteArray = new Uint8Array(byteNumbers)
+            blob = new Blob([byteArray], { type: mimeType })
+            imgName = localPath.split(/[\/\\]/).pop() || 'image.png'
+          }
+          
           const formData = new FormData()
-          // Use original filename or dummy to preserve extension
-          const imgName = imagePath.split(/[\/\\]/).pop() || 'image.png'
           formData.append('file', blob, imgName)
           const upRes = await backendFetch('/api/upload', { method: 'POST', body: formData })
           if (!upRes.ok) throw new Error('Failed to upload image')
@@ -156,14 +181,60 @@ export function useGeneration(): UseGenerationReturn {
         // Upload audio to remote backend if provided
         if (audioPath) {
           setState(prev => ({ ...prev, statusMessage: 'Uploading audio...' }))
-          const { data, mimeType } = await window.electronAPI.readLocalFile(audioPath)
-          const blob = await fetch(`data:${mimeType};base64,${data}`).then(r => r.blob())
+          let blob: Blob
+          let audName = 'audio.mp3'
+          
+          if (audioPath.startsWith('blob:')) {
+            const resp = await fetch(audioPath)
+            blob = await resp.blob()
+          } else {
+            const fileUrlToPath = (url: string) => {
+              if (url.startsWith('file://')) {
+                let p = decodeURIComponent(url.slice(7))
+                if (/^\/[A-Za-z]:/.test(p)) p = p.slice(1)
+                return p
+              }
+              return url
+            }
+            const localPath = fileUrlToPath(audioPath)
+            const { data, mimeType } = await window.electronAPI.readLocalFile(localPath)
+            const byteCharacters = atob(data)
+            const byteNumbers = new Array(byteCharacters.length)
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i)
+            }
+            const byteArray = new Uint8Array(byteNumbers)
+            blob = new Blob([byteArray], { type: mimeType })
+            audName = localPath.split(/[\/\\]/).pop() || 'audio.mp3'
+          }
+          
           const formData = new FormData()
-          const audName = audioPath.split(/[\/\\]/).pop() || 'audio.mp3'
           formData.append('file', blob, audName)
           const upRes = await backendFetch('/api/upload', { method: 'POST', body: formData })
           if (!upRes.ok) throw new Error('Failed to upload audio')
           finalAudioPath = (await upRes.json()).path
+        }
+      } else {
+        // Local Backend needs absolute paths
+        const fileUrlToPath = (url: string) => {
+          if (url.startsWith('file://')) {
+            let p = decodeURIComponent(url.slice(7))
+            if (/^\/[A-Za-z]:/.test(p)) p = p.slice(1)
+            return p
+          }
+          return url
+        }
+        if (imagePath) {
+          if (imagePath.startsWith('blob:')) {
+            throw new Error('Local backend requires an absolute file path, but received an unsaved browser file. Please click "upload a file" instead of dragging from another browser window.')
+          }
+          finalImagePath = fileUrlToPath(imagePath)
+        }
+        if (audioPath) {
+          if (audioPath.startsWith('blob:')) {
+            throw new Error('Local backend requires an absolute file path, but received an unsaved browser file. Please click "upload a file" instead of dragging from another browser window.')
+          }
+          finalAudioPath = fileUrlToPath(audioPath)
         }
       }
 
@@ -253,12 +324,13 @@ export function useGeneration(): UseGenerationReturn {
       
       if (result.status === 'complete' && result.video_path) {
         let fileUrl: string
-        const isExternal = await window.electronAPI.isExternalBackend()
+        const backendCreds = await window.electronAPI.getBackend()
+        const connectedUrl = backendCreds?.url || ''
+        const isExternal = connectedUrl && !connectedUrl.includes('127.0.0.1') && !connectedUrl.includes('localhost')
         
         if (isExternal) {
           fileUrl = await backendMediaUrl(result.video_path)
         } else {
-          // Convert Windows path to proper file:// URL
           const videoPathNormalized = result.video_path.replace(/\\/g, '/')
           fileUrl = videoPathNormalized.startsWith('/') ? `file://${videoPathNormalized}` : `file:///${videoPathNormalized}`
         }

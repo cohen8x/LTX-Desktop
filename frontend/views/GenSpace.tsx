@@ -15,7 +15,7 @@ import type { ICLoraConditioningType } from '../components/ICLoraPanel'
 import type { Asset } from '../types/project'
 import { GenerationErrorDialog } from '../components/GenerationErrorDialog'
 import { copyToAssetFolder } from '../lib/asset-copy'
-import { fileUrlToPath } from '../lib/url-to-path'
+
 import {
   FORCED_API_VIDEO_FPS,
   FORCED_API_VIDEO_RESOLUTIONS,
@@ -1345,14 +1345,14 @@ export function GenSpace() {
     } else {
       // Generate video (t2v if no image/audio, i2v if image, a2v if audio)
       // Extract filesystem path from the file:// URL for the backend
-      const imagePath = inputImage ? fileUrlToPath(inputImage) : null
-      const audioPath = inputAudio ? fileUrlToPath(inputAudio) : null
+      const imageUri = inputImage
+      const audioUri = inputAudio
       const videoSettings = applyForcedVideoSettings(settings)
-      if (audioPath) videoSettings.model = 'pro'
+      if (audioUri) videoSettings.model = 'pro'
 
       generate(
         prompt,
-        imagePath,
+        imageUri,
         {
           model: videoSettings.model as 'fast' | 'pro',
           duration: videoSettings.duration,
@@ -1365,7 +1365,7 @@ export function GenSpace() {
           imageAspectRatio: videoSettings.aspectRatio,
           imageSteps: 4,
         },
-        audioPath,
+        audioUri,
       )
     }
   }
