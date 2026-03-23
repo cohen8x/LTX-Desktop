@@ -51,7 +51,8 @@ def create_app(
     app.state.admin_token = admin_token  # type: ignore[attr-defined]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=allowed_origins or DEFAULT_ALLOWED_ORIGINS,
+        allow_origins=["*"],
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
