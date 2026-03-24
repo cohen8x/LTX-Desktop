@@ -19,8 +19,32 @@ console_handler.setLevel(logging.INFO)
 logging.basicConfig(level=logging.INFO, handlers=[console_handler])
 logger = logging.getLogger("Proxy")
 
-# Cloud configuration - Fallback to testing fallback URL if not set
-LTX_CLOUD_URL = os.environ.get("LTX_CLOUD_URL", "http://117.50.x.x:8000")
+# Cloud configuration - Load from env or config.ini
+def _load_cloud_url() -> str:
+    env_url = os.environ.get("LTX_CLOUD_URL")
+    if env_url:
+        return env_url
+        
+    import configparser
+    ini_paths = [
+        Path.cwd() / "config.ini", 
+        Path(os.environ.get("LTX_APP_DATA_DIR", "")) / "config.ini" if os.environ.get("LTX_APP_DATA_DIR") else None
+    ]
+    
+    for p in [x for x in ini_paths if x is not None]:
+        if p.exists():
+            try:
+                config = configparser.ConfigParser()
+                config.read(p, encoding="utf-8")
+                if "Proxy" in config and "CloudUrl" in config["Proxy"]:
+                    url = config["Proxy"]["CloudUrl"].strip()
+                    if url: return url
+            except Exception as e:
+                logger.error(f"Error reading config.ini at {p}: {e}")
+                
+    return "http://117.50.248.201:8000" # Final fallback
+
+LTX_CLOUD_URL = _load_cloud_url()
 
 # Local Paths
 _env_dir = os.environ.get("LTX_APP_DATA_DIR")
