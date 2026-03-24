@@ -12,7 +12,13 @@ export function AudioUploader({ onAudioSelect, selectedAudio }: AudioUploaderPro
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
     if (file) {
-      const filePath = (file as any).path as string | undefined
+      let filePath: string | undefined;
+      try {
+        filePath = window.electronAPI.getPathForFile(file);
+      } catch (e) {
+        filePath = (file as any).path as string | undefined;
+      }
+      
       if (filePath) {
         const normalized = filePath.replace(/\\/g, '/')
         const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`

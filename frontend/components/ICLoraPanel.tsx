@@ -346,7 +346,12 @@ export function ICLoraPanel({
 
     const file = e.dataTransfer.files?.[0]
     if (file) {
-      const filePath = (file as unknown as { path?: string }).path
+      let filePath: string | undefined;
+      try {
+        filePath = window.electronAPI.getPathForFile(file);
+      } catch (e) {
+        filePath = (file as any).path as string | undefined;
+      }
       if (filePath) {
         setInputVideoPath(filePath)
         setInputVideoUrl(pathToFileUrl(filePath))

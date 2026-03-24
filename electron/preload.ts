@@ -1,5 +1,4 @@
-// Using require for Electron preload compatibility
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer, webUtils } = require('electron')
 
 // Expose protected methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -46,6 +45,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Paths
   getDownloadsPath: (): Promise<string> => ipcRenderer.invoke('get-downloads-path'),
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
   // Project assets
   copyToProjectAssets: (srcPath: string, projectId: string): Promise<{ success: boolean; path?: string; url?: string; error?: string }> =>
     ipcRenderer.invoke('copy-to-project-assets', srcPath, projectId),
@@ -160,6 +160,7 @@ declare global {
       openLogFolder: () => Promise<boolean>
       getResourcePath: () => Promise<string | null>
       getDownloadsPath: () => Promise<string>
+      getPathForFile: (file: File) => string
       copyToProjectAssets: (srcPath: string, projectId: string) => Promise<{ success: boolean; path?: string; url?: string; error?: string }>
       getProjectAssetsPath: () => Promise<string>
       openProjectAssetsPathChangeDialog: () => Promise<{ success: boolean; path?: string; error?: string }>

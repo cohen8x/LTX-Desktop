@@ -12,8 +12,13 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
     if (file) {
-      // In Electron, File objects have a .path property with the full filesystem path
-      const filePath = (file as any).path as string | undefined
+      let filePath: string | undefined;
+      try {
+        filePath = window.electronAPI.getPathForFile(file);
+      } catch (e) {
+        filePath = (file as any).path as string | undefined;
+      }
+      
       if (filePath) {
         const normalized = filePath.replace(/\\/g, '/')
         const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
