@@ -106,6 +106,8 @@ class GenerationProgressResponse(BaseModel):
     progress: int
     currentStep: int | None
     totalSteps: int | None
+    video_path: str | None = None
+    image_paths: list[str] | None = None
 
 
 class ModelInfo(BaseModel):

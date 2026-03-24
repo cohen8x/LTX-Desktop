@@ -249,8 +249,30 @@ async def proxy_catchall(request: Request, path: str):
         
         return Response(content=response_body, status_code=response.status_code, headers=resp_headers)
         
-    except httpx.RequestError as e:
-        logger.error(f"Proxy error connecting to cloud server: {e}")
+    except Exception as e:
+        logger.error(f"Proxy error connecting to cloud server: {type(e).__name__} - {e}")
+        if path in ["api/generate", "api/retake", "api/ic-lora/generate"]:
+            logger.info("Connection dropped during video generation. Fallback tracking progress...")
+            import asyncio
+            for _ in range(1800): # Allow up to ~1 hour of polling just in case
+                await asyncio.sleep(2)
+                try:
+                    prog_resp = await client.get(f"{LTX_CLOUD_URL}/api/generation/progress")
+                    if prog_resp.status_code != 200:
+                        continue
+                    prog_data = prog_resp.json()
+                    status = prog_data.get("status")
+                    if status == "complete":
+                        cloud_path = prog_data.get("video_path")
+                        if cloud_path:
+                            local_path = await download_file_from_cloud(cloud_path)
+                            resp_data = {"status": "complete", "video_path": local_path.replace("\\", "/")}
+                            return JSONResponse(content=resp_data)
+                    elif status in ["error", "cancelled"]:
+                        return JSONResponse(status_code=500, content={"error": "Cloud generation failed or cancelled."})
+                except Exception as poll_e:
+                    pass
+                    
         return JSONResponse(status_code=502, content={"error": "Cloud server unreachable or timed out."})
 
 

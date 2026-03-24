@@ -216,13 +216,16 @@ class GenerationHandler(StateHandlerBase):
                     currentStep=progress.current_step,
                     totalSteps=progress.total_steps,
                 )
-            case GenerationComplete():
+            case GenerationComplete(result=result):
+                is_list = isinstance(result, list)
                 return GenerationProgressResponse(
                     status="complete",
                     phase="complete",
                     progress=100,
                     currentStep=0,
                     totalSteps=0,
+                    video_path=result[0] if is_list else result,
+                    image_paths=result if is_list else [result],
                 )
             case GenerationCancelled():
                 return GenerationProgressResponse(
