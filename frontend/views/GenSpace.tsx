@@ -398,6 +398,21 @@ function PromptBar({
       if (asset.type === 'image') {
         onInputImageChange(asset.url)
       }
+    } else {
+      const file = e.dataTransfer.files?.[0]
+      if (file && file.type.startsWith('image/')) {
+        let filePath: string | undefined
+        try { filePath = window.electronAPI?.getPathForFile(file) } catch {}
+        if (!filePath) filePath = (file as any).path
+
+        if (filePath) {
+          const normalized = filePath.replace(/\\/g, '/')
+          const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
+          onInputImageChange(fileUrl)
+        } else {
+          onInputImageChange(URL.createObjectURL(file))
+        }
+      }
     }
   }
 
@@ -418,11 +433,16 @@ function PromptBar({
     if (file) {
       const ext = file.name.split('.').pop()?.toLowerCase()
       if (['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a'].includes(ext || '')) {
-        const filePath = (file as any).path as string | undefined
+        let filePath: string | undefined
+        try { filePath = window.electronAPI?.getPathForFile(file) } catch {}
+        if (!filePath) filePath = (file as any).path
+
         if (filePath) {
           const normalized = filePath.replace(/\\/g, '/')
           const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
           onInputAudioChange(fileUrl)
+        } else {
+          onInputAudioChange(URL.createObjectURL(file))
         }
       }
     }
@@ -431,11 +451,16 @@ function PromptBar({
   const handleAudioFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      const filePath = (file as any).path as string | undefined
+      let filePath: string | undefined
+      try { filePath = window.electronAPI?.getPathForFile(file) } catch {}
+      if (!filePath) filePath = (file as any).path
+
       if (filePath) {
         const normalized = filePath.replace(/\\/g, '/')
         const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
         onInputAudioChange(fileUrl)
+      } else {
+        onInputAudioChange(URL.createObjectURL(file))
       }
     }
   }
@@ -443,8 +468,10 @@ function PromptBar({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file && file.type.startsWith('image/')) {
-      // In Electron, File objects have a .path property with the full filesystem path
-      const filePath = (file as any).path as string | undefined
+      let filePath: string | undefined
+      try { filePath = window.electronAPI?.getPathForFile(file) } catch {}
+      if (!filePath) filePath = (file as any).path
+
       if (filePath) {
         const normalized = filePath.replace(/\\/g, '/')
         const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`

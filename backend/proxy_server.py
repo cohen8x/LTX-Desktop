@@ -206,7 +206,7 @@ async def process_uplink_hijack(path: str, body: bytes) -> bytes:
             
             # === 这里加上给用户的调试日志，一目了然 ===
             logger.info("===========================================")
-            logger.info("🚀 准备发往云端服务器的最终生成指令 (Payload):")
+            logger.info("[Proxy] 准备发往云端服务器的最终生成指令 (Payload):")
             logger.info(f" - 文本提示词 (Prompt): {data.get('prompt', '空')}")
             if data.get("imagePath"):
                 logger.info(f" - 图片路径 (Image): [成功附加] {data.get('imagePath')}")
