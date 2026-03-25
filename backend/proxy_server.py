@@ -42,7 +42,7 @@ def _load_cloud_url() -> str:
             except Exception as e:
                 logger.error(f"Error reading config.ini at {p}: {e}")
                 
-    return "http://117.50.248.201:8000" # Final fallback
+    return "http://117.50.226.7:8000" # Final fallback
 
 LTX_CLOUD_URL = _load_cloud_url()
 
@@ -190,7 +190,10 @@ async def process_uplink_hijack(path: str, body: bytes) -> bytes:
             data = json.loads(body)
             # Find and replace local paths
             if data.get("imagePath"):
-                data["imagePath"] = await upload_file_to_cloud(data["imagePath"])
+                uploaded = await upload_file_to_cloud(data["imagePath"])
+                if uploaded == data["imagePath"] and not os.path.exists(data["imagePath"]):
+                    logger.warning(f"❌ 图片上传失败: 本地找不到路径 {data['imagePath']} (这通常是因为使用了直接从网页拖拽或截图软件粘贴的缓存图)。图片将被无视！")
+                data["imagePath"] = uploaded
             if data.get("audioPath"):
                 data["audioPath"] = await upload_file_to_cloud(data["audioPath"])
             if data.get("video_path"):
@@ -201,6 +204,16 @@ async def process_uplink_hijack(path: str, body: bytes) -> bytes:
                     if img.get("path"):
                         img["path"] = await upload_file_to_cloud(img["path"])
             
+            # === 这里加上给用户的调试日志，一目了然 ===
+            logger.info("===========================================")
+            logger.info("🚀 准备发往云端服务器的最终生成指令 (Payload):")
+            logger.info(f" - 文本提示词 (Prompt): {data.get('prompt', '空')}")
+            if data.get("imagePath"):
+                logger.info(f" - 图片路径 (Image): [成功附加] {data.get('imagePath')}")
+            else:
+                logger.info(" - 图片路径 (Image): [未附加] (前端没有传递图片，本次将纯靠文字生成！)")
+            logger.info("===========================================")
+
             return json.dumps(data).encode("utf-8")
         except json.JSONDecodeError:
             pass

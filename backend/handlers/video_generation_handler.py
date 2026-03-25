@@ -73,6 +73,13 @@ class VideoGenerationHandler(StateHandlerBase):
         self._ltx_api_client = ltx_api_client
 
     def generate(self, req: GenerateVideoRequest) -> GenerateVideoResponse:
+        logger.info("\n===========================================")
+        logger.info("🎬 [云端后端请求接收器] 收到了新的视频生成任务！")
+        logger.info(f" - 用户输入的提示词 (Prompt): {req.prompt}")
+        logger.info(f" - 附带的图片路径 (Image): {req.imagePath if req.imagePath else '[无图片 / 空]'}")
+        logger.info(f" - 指定生成模型: {req.model} (分辨率: {req.resolution})")
+        logger.info("===========================================\n")
+        
         if should_video_generate_with_ltx_api(
             force_api_generations=self.config.force_api_generations,
             settings=self.state.app_settings,
