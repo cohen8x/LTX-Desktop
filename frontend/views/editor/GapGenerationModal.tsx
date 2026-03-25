@@ -36,7 +36,7 @@ interface GapGenerationModalProps {
   regenStatusMessage: string
   regenProgress: number
   regenReset: () => void
-  handleGapGenerate: () => void
+  handleGapGenerate: (activeFrameUrl?: string | null) => void
   deleteGap: (gap: TimelineGap) => void
   setSelectedGap: (gap: TimelineGap | null) => void
   gapApplyAudioToTrack: boolean
@@ -468,7 +468,10 @@ export function GapGenerationModal({
                 Cancel
               </button>
               <button
-                onClick={handleGapGenerate}
+                onClick={() => {
+                  const activeFrameUrl = gapImageFile ? null : (startFrameEnabled ? displayedBeforeFrame : displayedAfterFrame)
+                  handleGapGenerate(activeFrameUrl)
+                }}
                 disabled={isRegenerating || !gapPrompt.trim()}
                 className="px-4 py-1.5 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-500 transition-colors font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
               >

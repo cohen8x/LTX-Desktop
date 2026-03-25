@@ -147,7 +147,7 @@ export function useGapGeneration({
   }, [])
 
   // Handle starting generation in a gap
-  const handleGapGenerate = useCallback(async () => {
+  const handleGapGenerate = useCallback(async (activeFrameUrl?: string | null) => {
     if (!selectedGap || !gapGenerateMode || !gapPrompt.trim() || !currentProjectId) return
     
     const gap = selectedGap
@@ -183,18 +183,42 @@ export function useGapGeneration({
       } else {
         // Convert File to filesystem path for the JSON-based generate API
         let imagePath: string | null = null
-        if (gapImageFile) {
+
+        if (activeFrameUrl && activeFrameUrl.startsWith('file://')) {
+          imagePath = fileUrlToPath(activeFrameUrl)
+        } else if (activeFrameUrl && activeFrameUrl.startsWith('data:')) {
+          const blob = await fetch(activeFrameUrl).then(r => r.blob());
+          const base64Data = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const b64 = (reader.result as string).split(',')[1];
+              resolve(b64 || '');
+            };
+            reader.readAsDataURL(blob);
+          });
+          const modelsPath = await window.electronAPI.getModelsPath();
+          const tmpDir = modelsPath.replace(/[/\\]models$/, '');
+          const tmpPath = `${tmpDir}/tmp_gap_frame_${Date.now()}.png`;
+          await window.electronAPI.saveFile(tmpPath, base64Data, 'base64');
+          imagePath = tmpPath;
+        } else if (gapImageFile) {
           const electronPath = (gapImageFile as any).path as string | undefined
           if (electronPath) {
             imagePath = electronPath
           } else {
-            // In-memory file (e.g. canvas capture) — save to temp file
-            const buf = await gapImageFile.arrayBuffer()
-            const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
+            // In-memory file (e.g. canvas capture) — save to temp file using safe FileReader to avoid call stack exceeded
+            const base64Data = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const b64 = (reader.result as string).split(',')[1];
+                resolve(b64 || '');
+              };
+              reader.readAsDataURL(gapImageFile);
+            });
             const modelsPath = await window.electronAPI.getModelsPath()
             const tmpDir = modelsPath.replace(/[/\\]models$/, '')
             const tmpPath = `${tmpDir}/tmp_gap_image_${Date.now()}.png`
-            await window.electronAPI.saveFile(tmpPath, b64, 'base64')
+            await window.electronAPI.saveFile(tmpPath, base64Data, 'base64')
             imagePath = tmpPath
           }
         }
